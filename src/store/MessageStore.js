@@ -1,22 +1,23 @@
 import {decorate, observable, action, computed} from 'mobx'
 //import Message from '../models/Message'
+
 class MessageStore {
     //@observable ...
     messages = [];
 
-    add(newId, newMessage) {
-        var newItem = {
-            id: newId,
-            message: newMessage
-        }
-        this.messages.push(newItem);
-        console.log("in storeTotal Messages")
-        console.log(newItem)
+    add(message) {
+        this.messages.push(message);
     }
     updateAll(messages) {
-      this.messages = messages;
+        if (messages!== undefined){
+            this.messages = Object.values(messages).sort((a,b) => {
+                return a.time - b.time
+            });
+         }
+      
     }
     get count() {
+        console.log(this.messages)
         return this.messages.length
     }
   }
@@ -30,7 +31,6 @@ decorate(MessageStore, {
     add: action,
     updateAll: action,
     count: computed
-
 })
 
 export default MessageStore;

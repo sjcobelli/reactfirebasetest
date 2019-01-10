@@ -1,146 +1,209 @@
 import React, { Component } from 'react';
-import {firebase, db} from '../firebase.js'; 
+import {db} from '../firebase.js'; 
 import MessageStore from '../store/MessageStore';
 import {observer} from 'mobx-react'
+import User from '../models/User'
+import ChatRoom from '../models/ChatRoom'
+import Message from '../models/Message'
 
 
+//Global state
 const store = new MessageStore();
+
 
 class ChatClient extends Component {
     constructor(props) {
         super(props);
         this.state = {
-
+            isLoggedIn: false,
+            isRoomOpen: false,
+            host: null,
+            remote: null,
         }
-        const user = new User("Doug");
+        this.handleLogin = this.handleLogin.bind(this)
+        this.handleRoom = this.handleRoom.bind(this)
+    }
+
+    handleLogin(userName) {
+        const user = new User(userName);
         user.signIn();
+        if (user.isUserSignedIn()) {
+            this.setState({
+                isLoggedIn: true,
+                host: user
+            });
+        } else {
+            console.log('Sign in failed, try again')
+        }
+    }
+
+    handleRoom(remote) {
+        /*
+        if (user.isUserSignedIn()) {
+            this.setState({
+                isLoggedIn: true,
+                host: user
+            });
+            console.log("Creating Chat room...")
+            const chatRoom = new ChatRoom();
+            chatRoom.listenForRecieving();
+            chatRoom.listenForDelievered();
+        } else {
+            console.log('Sign in failed, try again')
+        }
+        */
+       console.log("remote")
+       console.log(remote)
         
+        console.log("Creating Chat room...")
+        const chatRoom = new ChatRoom(this.state.host,remote, store);
+        chatRoom.getMessages();
+        console.log("Recieved past convos")
+        console.log("Starting listener for messages...")
+        chatRoom.listenForRecieving();
+        console.log("Starting listener for delivered...")
+        chatRoom.listenForDelievered();
+        this.setState({
+            isRoomOpen: true,
+            remote: remote
+        });
+
     }
     
     render(){
+        var content = null;
+        if (!this.state.isLoggedIn) {
+            content = (
+                <LoginPrompt onLogin={this.handleLogin}/>
+            )
+        }
+        else if (!this.state.isRoomOpen) {
+            content = (
+                <RoomForm onRoom={this.handleRoom}/>
+            )
+        } else {
+            content = (
+                <div>
+                    <MessageBoard store={store}/>
+                    <MessageForm host={this.state.host} remote={this.state.remote} store={store}/>
+                </div>
+            );
+        }
         return (
             <div>
-                
-                <MessageView store={store}/>
-                <MessageForm user={this.user} store={store}/>
+                {content}
             </div>
         )
     }
 }
 
-class MessageView extends Component {
+class LoginPrompt extends Component {
     constructor(props) {
-        super(props);
-        this.loadMessages = this.loadMessages.bind(this);
-    }
-    loadMessages() {
-        // Load all docs
-        db.collection('messages').get()
-        .then((snapshot) => {
-            snapshot.forEach((doc) => {
-                console.log(doc.id, '=>', doc.data());
-                this.props.store.add(doc.id, doc.data().message)
-            });
+        super(props)
+        this.state = ({
+            text: ''
         })
-        .catch((err) => {
-            console.log('Error getting documents', err);
+        this.handleChange = this.handleChange.bind(this)
+        this.handleSubmit = this.handleSubmit.bind(this)
+    }
+    handleChange(e) {
+        this.setState({
+            text: e.target.value
         });
-        //load change in docs
-        db.collection('messsages')
-        .onSnapshot(querySnapshot => {
-            querySnapshot.docChanges().forEach(change => {
-            if (change.type === 'added') {
-                console.log('New doc: ', change.doc.data());
-            }
-            if (change.type === 'modified') {
-                console.log('Modified doc: ', change.doc.data());
-            }
-            if (change.type === 'removed') {
-                console.log('Removed doc: ', change.doc.data());
-            }
-            });
-        });
-      }
+    }
+    handleSubmit(e) {
+        e.preventDefault();
+        this.props.onLogin(this.state.text)
+    }
+    render() {
+        return (
+            <div>
+            <span>Login: Enter your name:</span>
+            <form onSubmit={this.handleSubmit}>
+                <input type='text' onChange={this.handleChange}/>
+                <input type="submit" value="Submit"/>
+            </form>
+            </div>
+        );
+    }
+}
+
+
+class MessageBoard extends Component {
+    //board that shows all messages    
     render() {
         var listItems = []
         if (this.props.store.messages) {
-            console.log("dog up")
-            console.log(this.props.store.messages[0])
             listItems = this.props.store.messages.map((message, index) =>
                 <div>
-                    <li key={message.id}>
-                        <MessageV message={message.message}/>
+                    <li key={index}>
+                        <MessageView userName={message.from} message={message.text}/>
                     </li>
                 </div>
             );
         }
-        console.log(this.props.store.messages)
         return (
             <div>
-                <button onClick={this.loadMessages}>Show messages</button>
+                <span>MESSAGES: </span>
                 <ul>
                     {listItems}
                 </ul>
+                <span>END OF MESSAGES</span>
             </div>
             
         )
     }
 }
+
+MessageBoard = observer(MessageBoard);
+
+class MessageView extends Component{
+    //Todo: add persons name in front
+
+    render() {
+        return (
+            <div>
+                {this.props.userName} says: {this.props.message}
+            </div>
+            
+        )
+    }
+}
+
 
 MessageView = observer(MessageView);
 
-class MessageV extends Component{
+class RoomForm extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            text: '',
+          };
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);   
+    }
+    handleChange(event) {
+        this.setState({
+            text: event.target.value
+        });
+    }
+    handleSubmit(e) {
+        e.preventDefault();
+        //validate recipeint exists
+        const user = new User(this.state.text);
+        user.setRemote();
+        this.props.onRoom(user)
+    }
     render() {
-        console.log(this.props.message)
         return (
             <div>
-                {this.props.message}
+            <span>Enter recipients name:</span>
+            <form onSubmit={this.handleSubmit}>
+                <input type='text' onChange={this.handleChange}/>
+                <input type="submit" value="Submit"/>
+            </form>
             </div>
-            
-        )
-    }
-}
-
-
-MessageV = observer(MessageV);
-
-class User {
-    constructor(name) {
-        this.userName = name
-    }
-    // Returns the signed-in user's display name.
-    getUserName() {
-        return firebase.auth().currentUser.displayName;
-    }
-    isUserSignedIn() {
-        return !!firebase.auth().currentUser;
-    }  
-    
-    signIn() {
-        firebase.auth().signInAnonymously().catch(function(error) {
-            // Handle Errors here.
-            console.log(error.code);
-            console.log(error.message);
-            return false;
-            // ...
-          });
-        firebase.auth().onAuthStateChanged(user => {
-            if (user) {
-              // User is signed in.
-
-              console.log("sign in")
-              this.user = user
-              // ...
-            } else {
-              console.log("sign out")
-              // ...
-            }
-            // ...
-          });
-    }
-
-    signOut() {
-        firebase.auth().signOut();
+        );
     }
 }
 
@@ -148,18 +211,11 @@ class MessageForm extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            userName: "charles",
             text: '',
           };
         this.handleChange = this.handleChange.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);   
     }
-    
-    componentWillReceiveProps(nextProps) {
-        if(nextProps.user) {
-          this.setState({'userName': nextProps.user.displayName});
-        }
-      }
 
     handleChange(event) {
         this.setState({
@@ -168,15 +224,15 @@ class MessageForm extends Component {
     }
     handleSubmit(e) {
         e.preventDefault();
-        var newItem = {
-            message: this.state.text
-        }
-        console.log("username here")
+        console.log(this.props.host)
+        console.log("Sending to")
+        console.log(this.props.remote)
+        
+        var newItem = new Message(Date.now(), this.props.host.id, this.props.remote.id, this.state.text)
+        var pushRef = db.ref('users/' + this.props.host.id + '/messages/' + this.props.remote.id).push();
         console.log(newItem)
-        db.collection('messages').doc(this.state.userName).set(newItem)
-        this.setState({
-            text: ''
-        });
+        pushRef.set(newItem)
+        e.target.reset()
     }
     //uses input and button instead of form
     //because form submit updates page

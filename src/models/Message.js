@@ -1,11 +1,10 @@
 class Message {
-    constructor(from,to,text) {
+    constructor(time,from,to,text) {
+
         this.from = from
         this.to = to
         this.text = text
-    }
-    docToMessage(doc) {
-
+        this.time = time
     }
     
 }
