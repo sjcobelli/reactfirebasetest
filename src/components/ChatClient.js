@@ -14,6 +14,7 @@ const store = new MessageStore();
 class ChatClient extends Component {
     constructor(props) {
         super(props);
+        
         this.state = {
             isLoggedIn: false,
             isRoomOpen: false,
