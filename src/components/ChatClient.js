@@ -6,10 +6,8 @@ import User from '../models/User'
 import ChatRoom from '../models/ChatRoom'
 import Message from '../models/Message'
 
-
 //Global state
 const store = new MessageStore();
-
 
 class ChatClient extends Component {
     constructor(props) {

@@ -27,11 +27,11 @@ class CustomerView extends Component {
         super(props);
         //TtL: states are withen the scope 
         //of the component. Must be changed async through
-        //this.setState({key:val,,,})
+        //  this.setState({key:val,,,})
         this.state = {
             searchTerm: "",
         };
-        //TtL: methods must be binded to be called
+        //TtL: methods must be binded to be called with 'this'
         this.handleSearch=this.handleSearch.bind(this);
         this.apiSearch = this.apiSearch.bind(this);
     }
@@ -40,12 +40,12 @@ class CustomerView extends Component {
     apiSearch(searchTerm) {
         let apiString;
         if (searchTerm === undefined || searchTerm === "") {
-            apiString = 'http://localhost:8080/customers.json'
+            apiString = 'http://192.168.106.227:8080/customers.json'
         }
         else {
-            apiString = 'http://localhost:8080/customers/' + searchTerm + '.json'
+            apiString = 'http://192.168.106.227:8080/customers/' + searchTerm + '.json'
         }
-        //TtL: fetch is a super easy way to request. Can add 
+        //TtL: fetch api is a super easy way to request. Can add 
         //additional args for other types (PUT, POST, ect.)
 
         //lookup: observable
@@ -125,7 +125,6 @@ class CustomerSearch extends Component {
 
         //Sends input value to parent to be searched.
         this.props.onHandleSearch(this.state.searchTerm);
-
         //
     }
 

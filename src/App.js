@@ -6,6 +6,7 @@ import 'typeface-roboto';
 
 class App extends Component {
 //<CustomerView/>
+//<ChatClient/>
   render() {
     return (
       <div className="App">
